@@ -1,3 +1,11 @@
+function removeElement(array, element) {
+    const index = array.indexOf(element);
+    if (index < 0) {
+        return;
+    }
+    array.splice(index, 1);
+}
+
 function compileShader(gl, elem, width, height, boardWidth, boardHeight) {
     let shaderType;
     switch (elem.type) {
@@ -42,6 +50,10 @@ function getUniformLocation(gl, program, name) {
 
 class PuyoGoBoard {
     constructor(boardWidth, boardHeight, shadowRoot) {
+        this.boardWidth = boardWidth;
+        this.boardHeight = boardHeight;
+        this.shadowRoot = shadowRoot;
+        this.listeners = {};
         const stones = shadowRoot.querySelector('#stones');
         const width = parseInt(stones.getAttribute('width'));
         const height = parseInt(stones.getAttribute('height'));
@@ -75,31 +87,115 @@ class PuyoGoBoard {
         this.stonesHandle = getUniformLocation(gl, program, 'states');
         this.gl = gl;
         this.stoneSize = Math.min(width / boardWidth, height / boardHeight) / 2.0;
+        this.leaves = shadowRoot.getElementById('leaves');
+        stones.addEventListener('click', this.clickHandler.bind(this), false);
     }
 
-    addStone(boardState, index) {
+    /*
+     * indexは置いた直後の石の位置。アニメーションする
+     */
+    async drawStone(boardState, addIndex, removeIndices = []) {
+        const INTERVAL = 500; // ms
         const gl = this.gl;
-        const deltaStone = this.stoneSize * 0.02;
-        let newStone = deltaStone;
-        const step = () => {
-            // To send the data to the GPU, we first need to
-            // flatten our data into a single array.
-            const dataToSendToGPU = new Float32Array(boardState.length);
-            for (let i = 0; i < boardState.length; i++) {
-                dataToSendToGPU[i] = boardState[i] * (i === index ? newStone : this.stoneSize);
+        const b = boardState.slice();
+        const opponentColor = -boardState[addIndex];
+        for (const e of removeIndices) {
+            b[e] = opponentColor;
+        }
+        if (addIndex != null) {
+            await new Promise((res, rej) => {
+                const start = Date.now();
+                const grow = () => {
+                    const dataToSendToGPU = new Float32Array(b.length);
+                    const interval = Date.now() - start;
+                    const addStone = this.stoneSize * Math.min(interval / INTERVAL, 1.0);
+                    for (let i = 0; i < b.length; i++) {
+                        dataToSendToGPU[i] = b[i] * (i === addIndex ? addStone : this.stoneSize);
+                    }
+                    gl.uniform1fv(this.stonesHandle, dataToSendToGPU);
+                    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                    if (interval <= INTERVAL) {
+                        requestAnimationFrame(grow);
+                    } else {
+                        res();
+                    }
+                };
+                grow();
+            });
+        } else {
+            const dataToSendToGPU = new Float32Array(b.length);
+            for (let i = 0; i < b.length; i++) {
+                dataToSendToGPU[i] = b[i] * this.stoneSize;
             }
             gl.uniform1fv(this.stonesHandle, dataToSendToGPU);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-            newStone += deltaStone;
-            if (newStone <= this.stoneSize) {
-                requestAnimationFrame(step);
-            }
-        };
-        step();
+        }
+        if (removeIndices.length > 0) {
+            await new Promise((res, rej) => {
+                const start = Date.now();
+                const decline = () => {
+                    // To send the data to the GPU, we first need to
+                    // flatten our data into a single array.
+                    const dataToSendToGPU = new Float32Array(b.length);
+                    const interval = Date.now() - start;
+                    const removedStone = this.stoneSize * Math.max((INTERVAL - interval) / INTERVAL, 0.0);
+                    for (let i = 0; i < b.length; i++) {
+                        dataToSendToGPU[i] = b[i] * (removeIndices.includes(i) ? removedStone : this.stoneSize);
+                    }
+                    gl.uniform1fv(this.stonesHandle, dataToSendToGPU);
+                    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                    if (interval <= INTERVAL) {
+                        requestAnimationFrame(decline);
+                    } else {
+                        res();
+                    }
+                };
+                decline();
+            });
+        }
+        this.updateLeaves(boardState);
     }
 
-    puyoRemoveStones(boardState, indices) {
+    updateLeaves(boardState) {
+        for (let i = 0; i < this.boardWidth * this.boardHeight; i++) {
+            const leaf = this.leaves.getElementById(`leaf-${i}`);
+            if (boardState[i]) {
+                leaf.removeAttribute('display');
+                leaf.setAttribute('style', boardState[i] > 0.0 ? 'fill:#004d00;stroke:none' : 'fill:#00ff00;stroke:none');
+            } else {
+                leaf.setAttribute('display', 'none');
+            }
+        }
+    }
 
+    addEventListener(type, handler) {
+        if (!this.listeners[type]) {
+            this.listeners[type] = [];
+        }
+        this.listeners[type].push(handler);
+    }
+
+    removeEventListener(type, handler) {
+        if (!this.listeners[type]) {
+            return;
+        }
+        if (handler) {
+            removeElement(this.listeners[type], handler);
+        } else {
+            this.listeners[type] = [];
+        }
+    }
+
+    clickHandler(event) {
+        const rect = event.currentTarget.getBoundingClientRect();
+        const stones = this.shadowRoot.querySelector('#stones');
+        const x = Math.floor(this.boardWidth * (event.clientX - rect.left) / stones.offsetWidth) + 1;
+        const y = Math.floor(this.boardHeight * (event.clientY - rect.top) / stones.offsetHeight) + 1;
+        if (this.listeners.click) {
+            for (const e of this.listeners.click) {
+                e(x, y);
+            }
+        }
     }
 }
 
@@ -141,7 +237,9 @@ class PuyoGoBoardElement extends HTMLElement {
         const ctx = goban.getContext('2d');
         ctx.lineWidth = 1;
         ctx.strokeStyle = 'rgb(0, 0, 0)';
-        const stoneSize = Math.min(width / boardWidth, height / boardHeight);
+        const unitWidth = width / boardWidth;
+        const unitHeight = height / boardHeight;
+        const stoneSize = Math.min(unitWidth, unitHeight);
         ctx.beginPath();
         const halfSize = stoneSize / 2;
         for (let x = halfSize; x < width; x += stoneSize) {
@@ -153,15 +251,18 @@ class PuyoGoBoardElement extends HTMLElement {
             ctx.lineTo(width - halfSize, y);
         }
         ctx.stroke();
+        const leaves = this.shadowRoot.querySelector('#leaves');
+        for (let y = 1; y <= boardHeight; y++) {
+            for (let x = 1; x <= boardWidth; x++) {
+                const fourLeaves = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+                fourLeaves.id = `leaf-${x - 1 + (y - 1) * boardWidth}`;
+                fourLeaves.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#four-leaves');
+                fourLeaves.setAttribute('transform', `translate(${x * unitWidth - unitWidth / 2},${y * unitHeight - unitHeight / 2}) scale(0.4)`);
+                fourLeaves.setAttribute('display', 'none');
+                leaves.appendChild(fourLeaves);
+            }
+        }
         this.puyoGoBoard = new PuyoGoBoard(boardWidth, boardHeight, this.shadowRoot);
-        /* テスト */
-        const state = new Array(boardWidth * boardHeight);
-        state.fill(0.0);
-        state[0] = 1.0;
-        state[1] = 1.0;
-        state[2] = -1.0;
-        state[3] = -1.0;
-        this.puyoGoBoard.addStone(state, 0);
     }
 }
 

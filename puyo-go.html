@@ -1,17 +1,52 @@
 <template id="puyo-go-board">
     <style>
-        div {
+        :host {
+            display: inline-block;  /* or display: block; */
+        }
+        .container {
             position: relative;
         }
         canvas {
-            position: absolute;
+            display: block; /* デフォルトのinlineのままだとcanvasの下に隙間が入る */
         }
         #goban {
+            position: relative;
             background-image: url(wood2.jpg);
         }
+        #leaves, #stones {
+            position: absolute;
+            top: 0px;
+        }
     </style>
-    <div>
+    <div class="container">
         <canvas id="goban" width="768" height="768"></canvas>
+        <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" id="leaves" width="768" height="768">
+            <defs>
+                <path
+                id="leaf"
+                d="m 0,-145 c -5.36199,-1.5478604 -14.21002,-8.6465004 -15.2827,-22.05113 -1.07198,-13.40533 13.94132,-32.17336 16.35468,-37.80264 2.41335,-5.63069 5.89798,0.53528 10.72469,5.36199 4.826,4.82601 31.099959,32.70794 -3.21876,54.1573096 -2.1991,1.3477504 -2.12414,2.5074104 -1.84201,5.7565604 0.4773,5.48079 1.34068,4.67681 0.86479,5.39169 -0.94116,1.41068 -4.76802,1.98344 -4.7666,0.4773 -0.001,-8.58004 -3.771,-25.1482604 -0.50983,-37.92426 4.29002,-16.80157 1.5521,-19.18452 1.5521,-19.18452 0,0 -1.6617,10.93895 -3.51856,18.29286 -4.46821,17.69534958 -0.3578,27.52484 -0.3578,27.52484 z"/>
+            </defs>
+            <defs>
+                <g id="four-leaves">
+                    <use
+                    xlink:href="#leaf"
+                    transform="rotate(0)" 
+                    />
+                    <use
+                    xlink:href="#leaf"
+                    transform="rotate(90)" 
+                    />
+                    <use
+                    xlink:href="#leaf"
+                    transform="rotate(180)" 
+                    />
+                    <use
+                    xlink:href="#leaf"
+                    transform="rotate(270)" 
+                    />
+                </g>
+            </defs>
+        </svg>
         <canvas id="stones" width="768" height="768"></canvas>
     </div>
     <script id="vs" type="x-shader/x-vertex">
@@ -53,7 +88,7 @@
             }
             float alpha = float(b > 1.0 || w > 1.0);
             float white = float(w > 1.0);
-            gl_FragColor = vec4(white, white, white, alpha);
+            gl_FragColor = vec4(0.0, white + 0.3, 0.0, alpha);
         }
     </script>
 </template>
