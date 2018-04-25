@@ -94,13 +94,19 @@ class PuyoGoBoard {
     /*
      * indexは置いた直後の石の位置。アニメーションする
      */
-    async drawStone(boardState, addIndex, removeIndices = []) {
+    async drawStone(boardState, color, addIndex, removeIndices = []) {
         const INTERVAL = 500; // ms
         const gl = this.gl;
         const b = boardState.slice();
-        const opponentColor = -boardState[addIndex];
-        for (const e of removeIndices) {
-            b[e] = opponentColor;
+        if (removeIndices.includes(addIndex)) {
+            for (const e of removeIndices) {
+                b[e] = color;
+            }
+        } else {
+            const opponentColor = -color;
+            for (const e of removeIndices) {
+                b[e] = opponentColor;
+            }
         }
         if (addIndex != null) {
             await new Promise((res, rej) => {
@@ -130,6 +136,7 @@ class PuyoGoBoard {
             gl.uniform1fv(this.stonesHandle, dataToSendToGPU);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
+        this.updateLeaves(boardState);
         if (removeIndices.length > 0) {
             await new Promise((res, rej) => {
                 const start = Date.now();
@@ -153,7 +160,6 @@ class PuyoGoBoard {
                 decline();
             });
         }
-        this.updateLeaves(boardState);
     }
 
     updateLeaves(boardState) {

@@ -459,20 +459,24 @@ class GoPosition {
                 captives: []
             };
         }
-        if (point == this.ko || this.getState(point) !== EMPTY) { // 着手禁止
+        if (this.getState(point) !== EMPTY) {
             return null;
         }
         this.setState(point, this.turn);
-
-        const captives = this.captureBy(point);
+        let captives;
+        if (point === this.ko) {
+            captives = [point];  // 以下で書き直すので効果はない
+        } else {
+            captives = this.captureBy(point);
+        }
         const string = this.stringAt(point);
         const liberties = string.liberties.length;
         if (liberties === 0) { // 着手禁止
-            this.setState(point, EMPTY); // restore
-            return null;
+            captives = string.points;
+            this.removeString(string);
         }
         const ko = this.ko;
-        if (captives.length === 1 && liberties === 1 && string.points.length === 1) {
+        if (point !== this.ko && captives.length === 1 && liberties === 1 && string.points.length === 1) {
             this.ko = string.liberties[0];
         } else {
             this.ko = null;
@@ -489,11 +493,17 @@ class GoPosition {
         if (move.point === PASS) {
             return;
         }
-        this.setState(move.point, EMPTY);
-        const opponent = opponentOf(move.turn);
-        for (const p of move.captives) {
-            this.setState(p, opponent);
+        if (move.captives === move.string.points) {
+            for (const p of move.captives) {
+                this.setState(p, move.turn);
+            }
+        } else {
+            const opponent = opponentOf(move.turn);
+            for (const p of move.captives) {
+                this.setState(p, opponent);
+            }
         }
+        this.setState(move.point, EMPTY);
     }
 
     isLegal(point) {
