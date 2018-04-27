@@ -1,4 +1,4 @@
-<template id="puyo-go-board">
+<template id="allelo-board">
     <style>
         :host {
             display: inline-block;  /* or display: block; */
@@ -60,7 +60,7 @@
         }
     </script>
     <script id="fs" type="x-shader/x-fragment">
-        precision highp float;
+        precision lowp float;
         const int BOARD_WIDTH = %BOARD_WIDTH%;
         const int BOARD_HEIGHT = %BOARD_HEIGHT%;
         const float WIDTH = %WIDTH%.0;
@@ -80,10 +80,13 @@
                     float dx = _width + float(i) * 2.0 * _width - x;
                     float dy = _height + float(j) * 2.0 * _height - (HEIGHT - y);
                     float ratio = r*r/(dx*dx + dy*dy);
+                    ratio = ratio * ratio;
+                    ratio = ratio * ratio;
+                    ratio = ratio * ratio;
                     if (r > 0.0) {
-                        b += ratio * ratio * ratio;
+                        b += ratio;
                     } else {
-                        w += ratio * ratio * ratio;
+                        w += ratio;
                     }
                 }
             }

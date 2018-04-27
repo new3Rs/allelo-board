@@ -48,7 +48,7 @@ function getUniformLocation(gl, program, name) {
     return uniformLocation;
 }
 
-class PuyoGoBoard {
+class AlleloBoard {
     constructor(boardWidth, boardHeight, shadowRoot) {
         this.boardWidth = boardWidth;
         this.boardHeight = boardHeight;
@@ -205,12 +205,12 @@ class PuyoGoBoard {
     }
 }
 
-class PuyoGoBoardElement extends HTMLElement {
+class AlleloBoardElement extends HTMLElement {
     constructor() {
         super();
         let shadowRoot = this.attachShadow({mode: 'open'});
-        const template = document.getElementById('puyo-go-template').import;
-        const t = template.querySelector('#puyo-go-board');
+        const template = document.getElementById('allelo-board-template').import;
+        const t = template.querySelector('#allelo-board');
         const instance = t.content.cloneNode(true);
         shadowRoot.appendChild(instance);
         this.puyoInitialize();
@@ -246,30 +246,44 @@ class PuyoGoBoardElement extends HTMLElement {
         const unitWidth = width / boardWidth;
         const unitHeight = height / boardHeight;
         const stoneSize = Math.min(unitWidth, unitHeight);
-        ctx.beginPath();
         const halfSize = stoneSize / 2;
-        for (let x = halfSize; x < width; x += stoneSize) {
-            ctx.moveTo(x, halfSize);
-            ctx.lineTo(x, height - halfSize);
+        function drawLines() {
+            ctx.beginPath();
+            for (let x = halfSize; x < width; x += stoneSize) {
+                ctx.moveTo(x, halfSize);
+                ctx.lineTo(x, height - halfSize);
+            }
+            for (let y = halfSize; y < width; y += stoneSize) {
+                ctx.moveTo(halfSize, y);
+                ctx.lineTo(width - halfSize, y);
+            }
+            ctx.stroke();
         }
-        for (let y = halfSize; y < width; y += stoneSize) {
-            ctx.moveTo(halfSize, y);
-            ctx.lineTo(width - halfSize, y);
+        function drawIntersections() {
+            for (let y = halfSize; y < width; y += stoneSize) {
+                for (let x = halfSize; x < width; x += stoneSize) {
+                    ctx.beginPath();
+                    ctx.arc(x, y, halfSize / 20, 0, Math.PI*2, false);
+                    ctx.fill();
+                }
+            }
         }
-        ctx.stroke();
+        //drawLines();
+        drawIntersections();
         const leaves = this.shadowRoot.querySelector('#leaves');
+        const scale = unitWidth * 0.0036;
         for (let y = 1; y <= boardHeight; y++) {
             for (let x = 1; x <= boardWidth; x++) {
                 const fourLeaves = document.createElementNS('http://www.w3.org/2000/svg', 'use');
                 fourLeaves.id = `leaf-${x - 1 + (y - 1) * boardWidth}`;
                 fourLeaves.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#four-leaves');
-                fourLeaves.setAttribute('transform', `translate(${x * unitWidth - unitWidth / 2},${y * unitHeight - unitHeight / 2}) scale(0.4)`);
+                fourLeaves.setAttribute('transform', `translate(${x * unitWidth - unitWidth / 2},${y * unitHeight - unitHeight / 2}) scale(${scale})`);
                 fourLeaves.setAttribute('display', 'none');
                 leaves.appendChild(fourLeaves);
             }
         }
-        this.puyoGoBoard = new PuyoGoBoard(boardWidth, boardHeight, this.shadowRoot);
+        this.alleloBoard = new AlleloBoard(boardWidth, boardHeight, this.shadowRoot);
     }
 }
 
-customElements.define('puyo-go-board', PuyoGoBoardElement);
+customElements.define('allelo-board', AlleloBoardElement);
