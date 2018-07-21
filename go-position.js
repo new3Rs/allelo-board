@@ -1,11 +1,10 @@
-/* global jssgf */
-/* exported GoPosition */
 // (C) 2017 ICHIKAWA, Yuji (New 3 Rs)
+/* global jssgf */
 
-const PASS = -1;
-const EMPTY = 0;
-const BLACK = 1;
-const WHITE = 2;
+export const PASS = -1;
+export const EMPTY = 0;
+export const BLACK = 1;
+export const WHITE = 2;
 
 function opponentOf(color) {
     switch (color) {
@@ -309,7 +308,7 @@ const HANDICAPS = [
 ];
 
 
-class GoPosition {
+export class GoPosition {
     static fromSgf(sgf) {
         const [root] = jssgf.fastParse(sgf);
         const p = new this(parseInt(root.SZ || '19'));
