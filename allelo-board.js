@@ -215,7 +215,7 @@ class AlleloBoard {
     }
 }
 
-class AlleloBoardElement extends HTMLElement {
+export class AlleloBoardElement extends HTMLElement {
     static init() {
         this.prototype.template = document.createElement('template');
         this.prototype.template.id = 'allelo-board';
@@ -317,6 +317,7 @@ class AlleloBoardElement extends HTMLElement {
     }
 </script>
 `;
+        customElements.define('allelo-board', this);
     }
 
     constructor() {
@@ -398,4 +399,3 @@ class AlleloBoardElement extends HTMLElement {
 }
 
 AlleloBoardElement.init();
-customElements.define('allelo-board', AlleloBoardElement);
