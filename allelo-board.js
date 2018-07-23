@@ -91,6 +91,16 @@ class AlleloBoard {
         stones.addEventListener('click', this.clickHandler.bind(this), false);
     }
 
+    xyToPoint(x, y) {
+        return (x - 1) + (y - 1) * this.boardWidth;
+    }
+
+    pointToXy(p) {
+        const y = p % this.boardWidth;
+        const x = p - y * this.boardWidth;
+        return [x + 1, y + 1];
+    }
+
     /*
      * indexは置いた直後の石の位置。アニメーションする
      */
