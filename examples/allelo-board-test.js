@@ -1,5 +1,5 @@
 import { GoPosition, BLACK, WHITE } from './go-position.js';
-import './allelo-board.js';
+import '../allelo-board.js';
 
 /* テスト */
 function testDraw() {
