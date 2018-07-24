@@ -215,7 +215,7 @@ class AlleloBoard {
     }
 }
 
-export class AlleloBoardElement extends HTMLElement {
+class AlleloBoardElement extends HTMLElement {
     static init() {
         this.prototype.template = document.createElement('template');
         this.prototype.template.id = 'allelo-board';
