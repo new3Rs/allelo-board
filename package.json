@@ -2,10 +2,10 @@
   "name": "allelo-board",
   "author": "Yuji Ichikawa <ichikawa.yuji@gmail.com>",
   "license": "not decided yet",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "yet another go board",
   "main": "allelo-board.js",
-  "format": "es6",
+  "format": "global",
   "registry": "jspm",
   "dependencies": {},
   "devDependencies": {
