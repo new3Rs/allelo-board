@@ -3,6 +3,7 @@ import '../allelo-board.js';
 
 /* テスト */
 function testDraw() {
+    console.log('test draw. click any intersection');
     const target = document.getElementById('target');
     const boardWidth = parseInt(target.getAttribute('data-width'));
     const boardHeight = parseInt(target.getAttribute('data-height'));
@@ -41,4 +42,22 @@ function testDraw() {
     });
 }
 
-testDraw();
+function testDynamicInsert() {
+    const el = document.createElement('allelo-board');
+    el.dataset.width = 5;
+    el.dataset.height = 5;
+    el.dataset.stoneSize = 50;
+    document.body.appendChild(el);
+}
+
+try {
+    testDraw();
+} catch (e) {
+    console.error(e);
+}
+
+try {
+    testDynamicInsert();
+} catch (e) {
+    console.error(e);
+}

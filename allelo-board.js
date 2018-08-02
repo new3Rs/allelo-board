@@ -54,41 +54,51 @@ class AlleloBoard {
         this.boardHeight = boardHeight;
         this.shadowRoot = shadowRoot;
         this.listeners = {};
-        const stones = shadowRoot.querySelector('#stones');
-        const width = parseInt(stones.getAttribute('width'));
-        const height = parseInt(stones.getAttribute('height'));
-        const gl = stones.getContext('webgl');
-        const vertexShader = compileShader(gl, shadowRoot.getElementById('vs'), width, height, boardWidth, boardHeight);
-        const fragmentShader = compileShader(gl, shadowRoot.getElementById('fs'), width, height, boardWidth, boardHeight);
-        const program = gl.createProgram();
-        gl.attachShader(program, vertexShader);
-        gl.attachShader(program, fragmentShader);
-        gl.linkProgram(program);
-        gl.useProgram(program);
+        const goban = shadowRoot.querySelector('#goban');
+        this.stones = shadowRoot.querySelector('#stones');
+        const width = parseInt(goban.getAttribute('width'));
+        const height = parseInt(goban.getAttribute('height'));
+        this.stones.width = width;
+        this.stones.height = height;
+        this.gl = this.stones.getContext('webgl');
+        this.vertexShader = compileShader(this.gl, shadowRoot.getElementById('vs'), width, height, boardWidth, boardHeight);
+        this.fragmentShader = compileShader(this.gl, shadowRoot.getElementById('fs'), width, height, boardWidth, boardHeight);
+        this.program = this.gl.createProgram();
+        this.gl.attachShader(this.program, this.vertexShader);
+        this.gl.attachShader(this.program, this.fragmentShader);
+        this.gl.linkProgram(this.program);
+        this.gl.useProgram(this.program);
         const vertexData = new Float32Array([
             -1.0,  1.0, // top left
             -1.0, -1.0, // bottom left
              1.0,  1.0, // top right
              1.0, -1.0, // bottom right
         ]);
-        const vertexDataBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, vertexDataBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, vertexData, gl.STATIC_DRAW);
-        const positionHandle = getAttribLocation(gl, program, 'position');
-        gl.enableVertexAttribArray(positionHandle);
-        gl.vertexAttribPointer(
+        const vertexDataBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vertexDataBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, vertexData, this.gl.STATIC_DRAW);
+        const positionHandle = getAttribLocation(this.gl, this.program, 'position');
+        this.gl.enableVertexAttribArray(positionHandle);
+        this.gl.vertexAttribPointer(
             positionHandle,
             2, // position is a vec2
-            gl.FLOAT, // each component is a float
-            gl.FALSE, // don't normalize values
+            this.gl.FLOAT, // each component is a float
+            this.gl.FALSE, // don't normalize values
             2 * 4, // two 4 byte float components per vertex
             0 // offset into each span of vertex data
         );
-        this.stonesHandle = getUniformLocation(gl, program, 'states');
-        this.gl = gl;
+        this.stonesHandle = getUniformLocation(this.gl, this.program, 'states');
         this.stoneSize = Math.min(width / boardWidth, height / boardHeight) / 2.0;
         this.leaves = shadowRoot.getElementById('leaves');
-        stones.addEventListener('click', this.clickHandler.bind(this), false);
+        this.clickHandler = this.constructor.prototype.clickHandler.bind(this);
+        this.stones.addEventListener('click', this.clickHandler, false);
+    }
+
+    destroy() {
+        this.stones.removeEventListener('click', this.clickHandler, false);
+        this.gl.deleteProgram(this.program);
+        this.gl.deleteShader(this.fragmentShader);
+        this.gl.deleteShader(this.vertexShader);
     }
 
     xyToPoint(x, y) {
@@ -241,8 +251,8 @@ class AlleloBoardElement extends HTMLElement {
     }
 </style>
 <div class="container">
-    <canvas id="goban" width="768" height="768"></canvas>
-    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" id="leaves" width="768" height="768">
+    <canvas id="goban"></canvas>
+    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" id="leaves">
         <defs>
             <path
             id="leaf"
@@ -269,7 +279,7 @@ class AlleloBoardElement extends HTMLElement {
             </g>
         </defs>
     </svg>
-    <canvas id="stones" width="768" height="768"></canvas>
+    <canvas id="stones"></canvas>
 </div>
 <script id="vs" type="x-shader/x-vertex">
     attribute vec2 position;
@@ -325,7 +335,21 @@ class AlleloBoardElement extends HTMLElement {
         let shadowRoot = this.attachShadow({mode: 'open'});
         const instance = this.template.content.cloneNode(true);
         shadowRoot.appendChild(instance);
-        this.puyoInitialize();
+        if (this.dataset.stoneSize != null && this.dataset.width != null && this.dataset.height != null) {
+            this.initialize(
+                parseFloat(this.dataset.stoneSize),
+                parseInt(this.dataset.width),
+                parseInt(this.dataset.height)
+            );
+        }
+    }
+
+    static get observedAttributes() {
+        return [
+            'data-stone-size',
+            'data-width',
+            'data-height'
+        ];
     }
 
     connectedCallback() {
@@ -341,39 +365,46 @@ class AlleloBoardElement extends HTMLElement {
     }
 
     attributeChangedCallback(name, oldvalue, newValue) {
-        if (name === 'data-width' || name === 'data-height') {
-            this.puyoInitialize();
+        if (
+            this.alleloBoard != null ||
+            this.dataset.stoneSize == null ||
+            this.dataset.width == null ||
+            this.dataset.height == null
+        ) {
+            // 既に初期化済かまだパラメータが揃っていないか。
+            return;
         }
+        this.initialize(
+            parseFloat(this.dataset.stoneSize),
+            parseInt(this.dataset.width),
+            parseInt(this.dataset.height)
+        );
     }
 
-    puyoInitialize() {
-        const boardWidth = parseInt(this.getAttribute('data-width'));
-        const boardHeight = parseInt(this.getAttribute('data-height'));
+    initialize(stoneSize, boardWidth, boardHeight) {
+        console.log(stoneSize, boardWidth, boardHeight);
         const goban = this.shadowRoot.querySelector('#goban');
-        const width = parseInt(goban.getAttribute('width'));
-        const height = parseInt(goban.getAttribute('height'));
         const ctx = goban.getContext('2d');
         ctx.lineWidth = 1;
         ctx.strokeStyle = 'rgb(0, 0, 0)';
-        const unitWidth = width / boardWidth;
-        const unitHeight = height / boardHeight;
-        const stoneSize = Math.min(unitWidth, unitHeight);
+        goban.width = stoneSize * boardWidth;
+        goban.height = stoneSize * boardHeight;
         const halfSize = stoneSize / 2;
         function drawLines() {
             ctx.beginPath();
-            for (let x = halfSize; x < width; x += stoneSize) {
+            for (let x = halfSize; x < goban.width; x += stoneSize) {
                 ctx.moveTo(x, halfSize);
-                ctx.lineTo(x, height - halfSize);
+                ctx.lineTo(x, goban.height - halfSize);
             }
-            for (let y = halfSize; y < width; y += stoneSize) {
+            for (let y = halfSize; y < goban.height; y += stoneSize) {
                 ctx.moveTo(halfSize, y);
-                ctx.lineTo(width - halfSize, y);
+                ctx.lineTo(goban.width - halfSize, y);
             }
             ctx.stroke();
         }
         function drawIntersections() {
-            for (let y = halfSize; y < width; y += stoneSize) {
-                for (let x = halfSize; x < width; x += stoneSize) {
+            for (let y = halfSize; y < goban.height; y += stoneSize) {
+                for (let x = halfSize; x < goban.width; x += stoneSize) {
                     ctx.beginPath();
                     ctx.arc(x, y, halfSize / 20, 0, Math.PI*2, false);
                     ctx.fill();
@@ -383,14 +414,17 @@ class AlleloBoardElement extends HTMLElement {
         //drawLines();
         drawIntersections();
         const leaves = this.shadowRoot.querySelector('#leaves');
-        const scale = unitWidth * 0.0036;
+        leaves.setAttribute('width', `${goban.width}px`);
+        leaves.setAttribute('height', `${goban.height}px`);
+        const scale = stoneSize * 0.0036;
         for (let y = 1; y <= boardHeight; y++) {
             for (let x = 1; x <= boardWidth; x++) {
                 const fourLeaves = document.createElementNS('http://www.w3.org/2000/svg', 'use');
                 fourLeaves.id = `leaf-${x - 1 + (y - 1) * boardWidth}`;
                 fourLeaves.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#four-leaves');
-                fourLeaves.setAttribute('transform', `translate(${x * unitWidth - unitWidth / 2},${y * unitHeight - unitHeight / 2}) scale(${scale})`);
+                fourLeaves.setAttribute('transform', `translate(${x * stoneSize - stoneSize / 2},${y * stoneSize - stoneSize / 2}) scale(${scale})`);
                 fourLeaves.setAttribute('display', 'none');
+                fourLeaves.classList.add('four-leaves');
                 leaves.appendChild(fourLeaves);
             }
         }
