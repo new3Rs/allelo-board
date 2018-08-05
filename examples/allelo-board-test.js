@@ -1,4 +1,4 @@
-import { GoPosition, BLACK, WHITE } from './go-position.js';
+import { GoPosition, BLACK, WHITE } from '../go-position.js';
 import '../allelo-board.js';
 
 /* テスト */
@@ -7,10 +7,7 @@ function testDraw() {
     const target = document.getElementById('target');
     const boardWidth = parseInt(target.getAttribute('data-width'));
     const boardHeight = parseInt(target.getAttribute('data-height'));
-    if (boardWidth !== boardHeight) {
-        throw new Error('not supported');
-    }
-    const position = new GoPosition(boardWidth);
+    const position = new GoPosition(boardWidth, boardHeight);
     let animation = false;
     target.alleloBoard.addEventListener('click', async function(x, y) {
         if (animation) {
@@ -24,8 +21,8 @@ function testDraw() {
             animation = false;
             return;
         }
-        const state = new Array(boardWidth * boardHeight);
-        for (let i = 0; i < position.BOARD_SIZE2; i++) {
+        const state = new Float32Array(boardWidth * boardHeight);
+        for (let i = 0; i < position.LENGTH; i++) {
             switch (position.getState(i)) {
                 case BLACK:
                 state[i] = 1.0;

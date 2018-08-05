@@ -1,3 +1,11 @@
+import { GoPosition, EMPTY, BLACK, WHITE } from "./go-position.js";
+
+/**
+ * 配列から要素を削除する。
+ * @private
+ * @param {Array} array 
+ * @param {*} element 
+ */
 function removeElement(array, element) {
     const index = array.indexOf(element);
     if (index < 0) {
@@ -6,6 +14,17 @@ function removeElement(array, element) {
     array.splice(index, 1);
 }
 
+/**
+ * シェーダをマクロ展開しコンパイルする。
+ * @private
+ * @param {WebGLRenderingContext} gl 
+ * @param {HTMLScriptElement} elem 
+ * @param {Number} width 
+ * @param {Number} height 
+ * @param {Integer} boardWidth 
+ * @param {Integer} boardHeight 
+ * @returns {WebGLShader}
+ */
 function compileShader(gl, elem, width, height, boardWidth, boardHeight) {
     let shaderType;
     switch (elem.type) {
@@ -32,6 +51,14 @@ function compileShader(gl, elem, width, height, boardWidth, boardHeight) {
     return shader;
 }
 
+/**
+ * getAttribLocationメソッドのラッパー関数。エラーを例外にする。
+ * @private
+ * @param {WebGLRenderingContext} gl 
+ * @param {WebGLProgram} program 
+ * @param {DOMString} name 
+ * @returns {GLint}
+ */
 function getAttribLocation(gl, program, name) {
     var attributeLocation = gl.getAttribLocation(program, name);
     if (attributeLocation === -1) {
@@ -40,6 +67,14 @@ function getAttribLocation(gl, program, name) {
     return attributeLocation;
 }
 
+/**
+ * getUniformLocationメソッドのラッパー関数。エラーを例外にする。
+ * @private
+ * @param {WebGLRenderingContext} gl 
+ * @param {WebGLProgram} program 
+ * @param {DOMString} name 
+ * @returns {GLint}
+ */
 function getUniformLocation(gl, program, name) {
     var uniformLocation = gl.getUniformLocation(program, name);
     if (uniformLocation === -1) {
@@ -48,16 +83,27 @@ function getUniformLocation(gl, program, name) {
     return uniformLocation;
 }
 
+/** allelo-boardのヘルパークラス */
 class AlleloBoard {
-    constructor(boardWidth, boardHeight, shadowRoot) {
+    /**
+     * @param {Number} stoneSize
+     * @param {Integer} boardWidth 
+     * @param {Integer} boardHeight 
+     * @param {ShadowRoot} shadowRoot 
+     */
+    constructor(stoneSize, boardWidth, boardHeight, shadowRoot) {
+        this.stoneSize = stoneSize;
         this.boardWidth = boardWidth;
         this.boardHeight = boardHeight;
         this.shadowRoot = shadowRoot;
         this.listeners = {};
         const goban = shadowRoot.querySelector('#goban');
+        this.territory = shadowRoot.querySelector('#territory');
         this.stones = shadowRoot.querySelector('#stones');
         const width = parseInt(goban.getAttribute('width'));
         const height = parseInt(goban.getAttribute('height'));
+        this.territory.setAttribute('width', width);
+        this.territory.setAttribute('height', height);
         this.stones.width = width;
         this.stones.height = height;
         this.gl = this.stones.getContext('webgl');
@@ -88,7 +134,6 @@ class AlleloBoard {
             0 // offset into each span of vertex data
         );
         this.stonesHandle = getUniformLocation(this.gl, this.program, 'states');
-        this.stoneSize = Math.min(width / boardWidth, height / boardHeight) / 2.0;
         this.leaves = shadowRoot.getElementById('leaves');
         this.clickHandler = this.constructor.prototype.clickHandler.bind(this);
         this.stones.addEventListener('click', this.clickHandler, false);
@@ -106,7 +151,7 @@ class AlleloBoard {
     }
 
     pointToXy(p) {
-        const y = p % this.boardWidth;
+        const y = Math.floor(p / this.boardWidth);
         const x = p - y * this.boardWidth;
         return [x + 1, y + 1];
     }
@@ -134,9 +179,9 @@ class AlleloBoard {
                 const grow = () => {
                     const dataToSendToGPU = new Float32Array(b.length);
                     const interval = Date.now() - start;
-                    const addStone = this.stoneSize * Math.min(interval / INTERVAL, 1.0);
+                    const addStone = this.stoneSize / 2 * Math.min(interval / INTERVAL, 1.0);
                     for (let i = 0; i < b.length; i++) {
-                        dataToSendToGPU[i] = b[i] * (i === addIndex ? addStone : this.stoneSize);
+                        dataToSendToGPU[i] = b[i] * (i === addIndex ? addStone : this.stoneSize / 2);
                     }
                     gl.uniform1fv(this.stonesHandle, dataToSendToGPU);
                     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -151,12 +196,13 @@ class AlleloBoard {
         } else {
             const dataToSendToGPU = new Float32Array(b.length);
             for (let i = 0; i < b.length; i++) {
-                dataToSendToGPU[i] = b[i] * this.stoneSize;
+                dataToSendToGPU[i] = b[i] * this.stoneSize / 2;
             }
             gl.uniform1fv(this.stonesHandle, dataToSendToGPU);
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
         this.updateLeaves(boardState);
+        this.updateTerritory(boardState);
         if (removeIndices.length > 0) {
             await new Promise((res, rej) => {
                 const start = Date.now();
@@ -165,9 +211,9 @@ class AlleloBoard {
                     // flatten our data into a single array.
                     const dataToSendToGPU = new Float32Array(b.length);
                     const interval = Date.now() - start;
-                    const removedStone = this.stoneSize * Math.max((INTERVAL - interval) / INTERVAL, 0.0);
+                    const removedStone = this.stoneSize / 2 * Math.max((INTERVAL - interval) / INTERVAL, 0.0);
                     for (let i = 0; i < b.length; i++) {
-                        dataToSendToGPU[i] = b[i] * (removeIndices.includes(i) ? removedStone : this.stoneSize);
+                        dataToSendToGPU[i] = b[i] * (removeIndices.includes(i) ? removedStone : this.stoneSize / 2);
                     }
                     gl.uniform1fv(this.stonesHandle, dataToSendToGPU);
                     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -191,6 +237,62 @@ class AlleloBoard {
             } else {
                 leaf.setAttribute('display', 'none');
             }
+        }
+    }
+
+    updateTerritory(boardState) {
+        const position = new GoPosition(this.boardWidth, this.boardHeight);
+        for (let y = 1; y <= this.boardHeight; y++) {
+            for (let x = 1; x <= this.boardWidth; x++) {
+                switch (boardState[this.xyToPoint(x, y)]) {
+                    case 1.0:
+                    position.setState(position.xyToPoint(x, y), BLACK);
+                    break;
+                    case -1.0:
+                    position.setState(position.xyToPoint(x, y), WHITE);
+                    break;
+                    default:
+                    position.setState(position.xyToPoint(x, y), EMPTY);
+                }
+            }
+        }
+
+        const emptiesArray = [];
+        const ctx = this.territory.getContext('2d');
+        for (let i = 0; i < boardState.length; i++) {
+            const [x, y] = this.pointToXy(i);
+            const j = position.xyToPoint(x, y);
+            ctx.clearRect(
+                (x - 1) * this.stoneSize,
+                (y - 1) * this.stoneSize,
+                this.stoneSize,
+                this.stoneSize
+            );
+            if (position.getState(j) !== EMPTY) {
+                continue;
+            }
+            let empties = emptiesArray.find(e => e.points.includes(j));
+            if (empties == null) {
+                empties = position.connectedEmptiesAt(j);
+                emptiesArray.push(empties);
+            }
+            if (empties.blacks.length > 0 && empties.whites.length === 0) {
+                console.log('black');
+                ctx.fillStyle = '#004d0080';
+            } else if (empties.blacks.length === 0 && empties.whites.length > 0) {
+                console.log('white');
+                ctx.fillStyle = '#00ff0080';
+            } else {
+                console.log('empty');
+                ctx.fillStyle = '#00000000';
+            }
+            console.log(x, y, this.stoneSize);
+            ctx.fillRect(
+                (x - 1) * this.stoneSize,
+                (y - 1) * this.stoneSize,
+                this.stoneSize,
+                this.stoneSize
+            );
         }
     }
 
@@ -245,13 +347,14 @@ class AlleloBoardElement extends HTMLElement {
         background-image: url(data:image/png;base64,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);
         background-color: rgb(196, 127, 51);
     }
-    #leaves, #stones {
+    #territory, #leaves, #stones {
         position: absolute;
         top: 0px;
     }
 </style>
 <div class="container">
     <canvas id="goban"></canvas>
+    <canvas id="territory"></canvas>
     <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" id="leaves">
         <defs>
             <path
@@ -382,7 +485,6 @@ class AlleloBoardElement extends HTMLElement {
     }
 
     initialize(stoneSize, boardWidth, boardHeight) {
-        console.log(stoneSize, boardWidth, boardHeight);
         const goban = this.shadowRoot.querySelector('#goban');
         const ctx = goban.getContext('2d');
         ctx.lineWidth = 1;
@@ -428,7 +530,7 @@ class AlleloBoardElement extends HTMLElement {
                 leaves.appendChild(fourLeaves);
             }
         }
-        this.alleloBoard = new AlleloBoard(boardWidth, boardHeight, this.shadowRoot);
+        this.alleloBoard = new AlleloBoard(stoneSize, boardWidth, boardHeight, this.shadowRoot);
     }
 }
 
