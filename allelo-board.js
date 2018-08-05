@@ -242,33 +242,38 @@ class AlleloBoard {
 
     updateTerritory(boardState) {
         const position = new GoPosition(this.boardWidth, this.boardHeight);
+        let stones = 0;
         for (let y = 1; y <= this.boardHeight; y++) {
             for (let x = 1; x <= this.boardWidth; x++) {
                 switch (boardState[this.xyToPoint(x, y)]) {
                     case 1.0:
                     position.setState(position.xyToPoint(x, y), BLACK);
+                    stones += 1;
                     break;
                     case -1.0:
                     position.setState(position.xyToPoint(x, y), WHITE);
+                    stones += 1;
                     break;
                     default:
                     position.setState(position.xyToPoint(x, y), EMPTY);
                 }
             }
         }
+        if (stones <= 1) { // 石を1つ置いた時他のすべてが地と見るのが正しいが、ルールを知ろうとする際には混乱すると思うので表示を抑制する
+            for (let i = 0; i < boardState.length; i++) {
+                const territory = this.territory.getElementById(`territory-${i}`);
+                territory.setAttribute('display', 'none');
+            }
+            return;
+        }
 
         const emptiesArray = [];
-        const ctx = this.territory.getContext('2d');
         for (let i = 0; i < boardState.length; i++) {
             const [x, y] = this.pointToXy(i);
             const j = position.xyToPoint(x, y);
-            ctx.clearRect(
-                (x - 1) * this.stoneSize,
-                (y - 1) * this.stoneSize,
-                this.stoneSize,
-                this.stoneSize
-            );
+            const territory = this.territory.getElementById(`territory-${i}`);
             if (position.getState(j) !== EMPTY) {
+                territory.setAttribute('display', 'none');
                 continue;
             }
             let empties = emptiesArray.find(e => e.points.includes(j));
@@ -277,22 +282,14 @@ class AlleloBoard {
                 emptiesArray.push(empties);
             }
             if (empties.blacks.length > 0 && empties.whites.length === 0) {
-                console.log('black');
-                ctx.fillStyle = '#004d0080';
+                territory.removeAttribute('display');
+                territory.setAttribute('style', 'fill:#004d00;stroke:#004d00');
             } else if (empties.blacks.length === 0 && empties.whites.length > 0) {
-                console.log('white');
-                ctx.fillStyle = '#00ff0080';
+                territory.removeAttribute('display');
+                territory.setAttribute('style', 'fill:#00ff00;stroke:#00ff00');
             } else {
-                console.log('empty');
-                ctx.fillStyle = '#00000000';
+                territory.setAttribute('display', 'none');
             }
-            console.log(x, y, this.stoneSize);
-            ctx.fillRect(
-                (x - 1) * this.stoneSize,
-                (y - 1) * this.stoneSize,
-                this.stoneSize,
-                this.stoneSize
-            );
         }
     }
 
@@ -354,7 +351,34 @@ class AlleloBoardElement extends HTMLElement {
 </style>
 <div class="container">
     <canvas id="goban"></canvas>
-    <canvas id="territory"></canvas>
+    <svg id="territory" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+        <defs>
+            <path id="two-leaves" d="M196.036,292.977c-16.781-18.297,21.344-105.25-166.266-192.188c-33.563,6.094-79.328,160.156,118.984,212.031
+    		c65.594,21.344,57.969,94.563,57.969,122.016h38.125c0,0-15.594-87.094,54.078-119.016
+    		c47.406-21.688,178.328-28.656,213.078-224.281c-66.234-38.313-281.625-7.75-276.266,186.313
+	    	c-3.141,27.297-4.703,50.422-19.875,44.109C197.567,314.336,196.036,292.977,196.036,292.977z" opacity="0.5" />
+        </defs>
+        <defs>
+            <g id="seedlings">
+                <use xlink:href="#two-leaves" transform="translate(-80,-80) scale(0.07,0.07)"></use>
+                <use xlink:href="#two-leaves" transform="translate(-15,-80) scale(0.07,0.07)"></use>
+                <use xlink:href="#two-leaves" transform="translate(55,-80) scale(0.07,0.07)"></use>
+                <use xlink:href="#two-leaves" transform="translate(120,-80) scale(0.07,0.07)"></use>
+                <use xlink:href="#two-leaves" transform="translate(-60,-15) scale(0.07,0.07)"></use>
+                <use xlink:href="#two-leaves" transform="translate(15,-15) scale(0.07,0.07)"></use>
+                <use xlink:href="#two-leaves" transform="translate(75,-15) scale(0.07,0.07)"></use>
+                <use xlink:href="#two-leaves" transform="translate(140,-15) scale(0.07,0.07)"></use>
+                <use xlink:href="#two-leaves" transform="translate(-80,55) scale(0.07,0.07)"></use>
+                <use xlink:href="#two-leaves" transform="translate(-15,55) scale(0.07,0.07)"></use>
+                <use xlink:href="#two-leaves" transform="translate(55,55) scale(0.07,0.07)"></use>
+                <use xlink:href="#two-leaves" transform="translate(120,55) scale(0.07,0.07)"></use>
+                <use xlink:href="#two-leaves" transform="translate(-60,120) scale(0.07,0.07)"></use>
+                <use xlink:href="#two-leaves" transform="translate(15,120) scale(0.07,0.07)"></use>
+                <use xlink:href="#two-leaves" transform="translate(75,120) scale(0.07,0.07)"></use>
+                <use xlink:href="#two-leaves" transform="translate(140,120) scale(0.07,0.07)"></use>
+            </g>
+        </defs>
+    </svg>
     <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" id="leaves">
         <defs>
             <path
@@ -528,6 +552,20 @@ class AlleloBoardElement extends HTMLElement {
                 fourLeaves.setAttribute('display', 'none');
                 fourLeaves.classList.add('four-leaves');
                 leaves.appendChild(fourLeaves);
+            }
+        }
+        const territory = this.shadowRoot.querySelector('#territory');
+        territory.setAttribute('width', `${goban.width}px`);
+        territory.setAttribute('height', `${goban.height}px`);
+        for (let y = 1; y <= boardHeight; y++) {
+            for (let x = 1; x <= boardWidth; x++) {
+                const karakusa = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+                karakusa.id = `territory-${x - 1 + (y - 1) * boardWidth}`;
+                karakusa.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#seedlings');
+                karakusa.setAttribute('transform', `translate(${x * stoneSize - stoneSize * 2 / 3},${y * stoneSize - stoneSize * 2 / 3}) scale(${scale})`);
+                karakusa.setAttribute('display', 'none');
+                karakusa.classList.add('territory');
+                territory.appendChild(karakusa);
             }
         }
         this.alleloBoard = new AlleloBoard(stoneSize, boardWidth, boardHeight, this.shadowRoot);
