@@ -1,7 +1,7 @@
 /* exported GoPosition */
 // (C) 2017 ICHIKAWA, Yuji (New 3 Rs)
 
-const PASS = -1;
+export const PASS = -1;
 export const EMPTY = 0;
 export const BLACK = 1;
 export const WHITE = 2;

@@ -1,4 +1,5 @@
 import { GoPosition, EMPTY, BLACK, WHITE } from "./go-position.js";
+export * from "./go-position.js";
 
 /**
  * 配列から要素を削除する。
