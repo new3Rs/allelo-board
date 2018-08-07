@@ -97,6 +97,7 @@ class AlleloBoard {
         this.boardWidth = boardWidth;
         this.boardHeight = boardHeight;
         this.shadowRoot = shadowRoot;
+        this.drawing = false;
         this.listeners = {};
         const goban = shadowRoot.querySelector('#goban');
         this.territory = shadowRoot.querySelector('#territory');
@@ -161,6 +162,7 @@ class AlleloBoard {
      * indexは置いた直後の石の位置。アニメーションする
      */
     async drawStone(boardState, color, addIndex, removeIndices = []) {
+        this.drawing = true;
         const INTERVAL = 500; // ms
         const gl = this.gl;
         const b = boardState.slice();
@@ -227,6 +229,7 @@ class AlleloBoard {
                 decline();
             });
         }
+        this.drawing = false;
     }
 
     updateLeaves(boardState) {
