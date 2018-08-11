@@ -335,7 +335,13 @@ class AlleloBoard {
 
 class AlleloBoardElement extends HTMLElement {
     static init() {
-        // Firefox 61はShadow DOM内のhrefでグローバルのidを参照してしまうバグがあるので、以下はそのワークアラウンド。
+        /*
+         * Shadow DOM内のhrefのfragmentの解決は仕様で決まっておらず、
+         * Chrome 68はshadow DOM内のidを参照、
+         * Firefox 61はグローバル DOMのidを参照、
+         * Safariは解決を未実装
+         * 以下は、Firefox用ワークアラウンド。グローバルにdefsを追加。
+         */
         const defs = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         defs.setAttributeNS(null, 'version', '1.1')
         defs.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
