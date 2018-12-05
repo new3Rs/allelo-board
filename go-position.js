@@ -54,6 +54,12 @@ export class GoPosition {
         this.ko = null;
     }
 
+    clear() {
+        this.state = new Uint8Array(this.LENGTH);
+        this.turn = BLACK;
+        this.ko = null;
+    }
+
     opponent() {
         return opponentOf(this.turn);
     }
