@@ -400,6 +400,8 @@ class AlleloBoardElement extends HTMLElement {
     }
     .container {
         position: relative;
+        padding: 10px;
+        background-color: orange;
     }
     canvas {
         display: block; /* デフォルトのinlineのままだとcanvasの下に隙間が入る */
