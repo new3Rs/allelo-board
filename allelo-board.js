@@ -401,7 +401,6 @@ class AlleloBoardElement extends HTMLElement {
     .container {
         position: relative;
         padding: 10px;
-        background-color: orange;
     }
     canvas {
         display: block; /* デフォルトのinlineのままだとcanvasの下に隙間が入る */
@@ -409,7 +408,7 @@ class AlleloBoardElement extends HTMLElement {
     #goban {
         position: relative;
     }
-    #territory, #leaves, #stones {
+    #territory, #leaves, #stones, #bans {
         position: absolute;
         top: 10px; /* .containerのpaddingと同じ値 TODO リファクタリング */
     }
@@ -417,8 +416,11 @@ class AlleloBoardElement extends HTMLElement {
         width: 100%;
         height: 100%;
     }
+    #bans {
+        pointer-events: none;
+    }
 </style>
-<div class="container">
+<div class="container", style="background-color: orange;">
     <canvas id="goban"></canvas>
     <svg id="territory" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
         <defs>
@@ -464,6 +466,7 @@ class AlleloBoardElement extends HTMLElement {
         </defs>
     </svg>
     <canvas id="stones"></canvas>
+    <canvas id="bans"></canvas>
 </div>
 <script id="vs" type="x-shader/x-vertex">
     attribute vec2 position;
@@ -580,9 +583,6 @@ class AlleloBoardElement extends HTMLElement {
             function drawIntersections() {
                 for (let y = halfSize; y < goban.height; y += stoneSize) {
                     for (let x = halfSize; x < goban.width; x += stoneSize) {
-                        if (this.bans && this.bans.some(e => { e[0] === x && e[1] === y })) {
-                            continue;
-                        }
                         ctx.fillStyle = 'rgb(196, 127, 51)';
                         ctx.fillRect(x - halfSize, y - halfSize, stoneSize, stoneSize);
                         ctx.fillStyle = groundPattern;
@@ -638,18 +638,21 @@ class AlleloBoardElement extends HTMLElement {
                 territory.appendChild(karakusa);
             }
         }
+        const bans = this.shadowRoot.querySelector('#bans');
+        bans.width = goban.width;
+        bans.height = goban.height;
         this.alleloBoard = new AlleloBoard(stoneSize, boardWidth, boardHeight, this.shadowRoot);
     }
 
     setBans(bans) {
-        this.bans = bans;
-        if (this.alleloBoard) {
-            const goban = this.shadowRoot.querySelector('#goban');
-            const stoneSize = goban.width / parseInt(this.dataset.width);
-            const ctx = goban.getContext('2d');
-            for (const ban of this.bans) {
-                ctx.clearRect((ban[0] - 1) * stoneSize, (ban[1] - 1) * stoneSize, stoneSize, stoneSize);
-            }
+        const canvas = this.shadowRoot.querySelector('#bans');
+        const stoneSize = canvas.width / parseInt(this.dataset.width);
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const background = this.shadowRoot.querySelector('.container').style.backgroundColor;
+        for (const ban of bans) {
+            ctx.fillStyle = background;
+            ctx.fillRect((ban[0] - 1) * stoneSize, (ban[1] - 1) * stoneSize, stoneSize, stoneSize);
         }
     }
 }

@@ -16,6 +16,7 @@ function testDraw() {
         position.setState(position.xyToPoint(ban[0], ban[1]), BAN);
     }
     let animation = false;
+    console.log('pass');
     target.alleloBoard.addEventListener('click', async function(x, y) {
         if (animation) {
             return;
