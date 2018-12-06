@@ -5,6 +5,7 @@ export const PASS = -1;
 export const EMPTY = 0;
 export const BLACK = 1;
 export const WHITE = 2;
+export const BAN = 3;
 
 /**
  * 相手のカラーを返す。
@@ -99,7 +100,7 @@ export class GoPosition {
 
     stringAt(point) {
         const color = this.getState(point);
-        if (color === EMPTY) {
+        if (color === EMPTY || color === BAN) {
             return null;
         }
         const opponent = opponentOf(color);
@@ -125,7 +126,7 @@ export class GoPosition {
                             this.marker1.mark(a);
                             if (state === opponent) {
                                 string.opponents.push(a);
-                            } else {
+                            } else if (state === EMPTY) {
                                 string.liberties.push(a);
                             }
                         }
@@ -162,7 +163,7 @@ export class GoPosition {
                             this.marker1.mark(a);
                             if (state === BLACK) {
                                 empties.blacks.push(a);
-                            } else {
+                            } else if (state === WHITE) {
                                 empties.whites.push(a);
                             }
                         }
@@ -367,6 +368,9 @@ export class GoPosition {
         for (let y = 1; y <= this.HEIGHT; y++) {
             for (let x = 1; x <= this.WIDTH; x++) {
                 switch (this.getState(this.xyToPoint(x, y))) {
+                    case BAN:
+                        string += '#';
+                        break;
                     case EMPTY:
                         string += '.';
                         break;

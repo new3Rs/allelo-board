@@ -1,13 +1,20 @@
-import { GoPosition, BLACK, WHITE } from '../go-position.js';
+import { GoPosition, BLACK, WHITE, BAN } from '../go-position.js';
 import '../allelo-board.js';
 
 /* テスト */
 function testDraw() {
     console.log('test draw. click any intersection');
     const target = document.getElementById('target');
+    const bans = [[1,1]]; 
+    target.onready = function() {
+        target.setBans(bans);
+    };
     const boardWidth = parseInt(target.getAttribute('data-width'));
     const boardHeight = parseInt(target.getAttribute('data-height'));
     const position = new GoPosition(boardWidth, boardHeight);
+    for (const ban of bans) {
+        position.setState(position.xyToPoint(ban[0], ban[1]), BAN);
+    }
     let animation = false;
     target.alleloBoard.addEventListener('click', async function(x, y) {
         if (animation) {
