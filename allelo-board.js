@@ -411,7 +411,7 @@ class AlleloBoardElement extends HTMLElement {
     }
     #territory, #leaves, #stones {
         position: absolute;
-        top: 0px;
+        top: 10px; /* .containerのpaddingと同じ値 TODO リファクタリング */
     }
     svg * {
         width: 100%;
