@@ -5,7 +5,7 @@ import '../allelo-board.js';
 function testDraw() {
     console.log('test draw. click any intersection');
     const target = document.getElementById('target');
-    const bans = [[1,1]]; 
+    const bans = [[3,3]]; 
     target.onready = function() {
         target.setBans(bans);
     };
